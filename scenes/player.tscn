@@ -39,8 +39,8 @@ animations = [{
 "speed": 10.0
 }]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_jmfnr"]
-radius = 5.98386
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p2ly6"]
+size = Vector2(7, 15)
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
@@ -57,7 +57,5 @@ frame_progress = 0.902748
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 z_index = 5
-position = Vector2(0, -7)
-rotation = -2.19911
-skew = -0.349066
-shape = SubResource("CircleShape2D_jmfnr")
+position = Vector2(-0.5, -7.5)
+shape = SubResource("RectangleShape2D_p2ly6")
