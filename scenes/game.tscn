@@ -172,6 +172,22 @@ texture = ExtResource("2_v1mav")
 physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_6m0od")
 
+[sub_resource type="Animation" id="Animation_lbyrn"]
+length = 3.001
+loop_mode = 2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 2.7),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(151, 10), Vector2(151, 65)]
+}
+
 [sub_resource type="Animation" id="Animation_cra5g"]
 resource_name = "move"
 length = 1.5
@@ -189,9 +205,14 @@ tracks/0/keys = {
 "values": [Vector2(150, 23), Vector2(150, 83)]
 }
 
-[sub_resource type="Animation" id="Animation_lbyrn"]
-length = 3.001
-loop_mode = 2
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_17vp5"]
+_data = {
+"RESET": SubResource("Animation_lbyrn"),
+"move": SubResource("Animation_cra5g")
+}
+
+[sub_resource type="Animation" id="Animation_7mu6g"]
+length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
@@ -199,16 +220,10 @@ tracks/0/path = NodePath(".:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0, 2.7),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
 "update": 0,
-"values": [Vector2(151, 10), Vector2(151, 65)]
-}
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_17vp5"]
-_data = {
-"RESET": SubResource("Animation_lbyrn"),
-"move": SubResource("Animation_cra5g")
+"values": [Vector2(-129, 69)]
 }
 
 [sub_resource type="Animation" id="Animation_v34jt"]
@@ -226,21 +241,6 @@ tracks/0/keys = {
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
 "values": [Vector2(-129, 150), Vector2(-129, 69)]
-}
-
-[sub_resource type="Animation" id="Animation_7mu6g"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(-129, 69)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_jd4jd"]
