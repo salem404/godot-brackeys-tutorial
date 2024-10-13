@@ -179,7 +179,7 @@ script = ExtResource("1_r8uw2")
 z_index = 5
 position = Vector2(0, -12)
 sprite_frames = SubResource("SpriteFrames_w084m")
-animation = &"run"
+animation = &"jump"
 autoplay = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
