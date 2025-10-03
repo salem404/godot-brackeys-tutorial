@@ -1,6 +1,6 @@
 [gd_scene load_steps=22 format=4 uid="uid://b8w6u3kaqi5yd"]
 
-[ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_ag2ik"]
+[ext_resource type="Script" uid="uid://b3pq5404wecau" path="res://scripts/game_manager.gd" id="1_ag2ik"]
 [ext_resource type="PackedScene" uid="uid://cn7sm5f68m2wn" path="res://scenes/player.tscn" id="1_wt0hl"]
 [ext_resource type="FontFile" uid="uid://bj00wbagcewg0" path="res://assets/fonts/PixelOperator8-Bold.ttf" id="2_meyfw"]
 [ext_resource type="Texture2D" uid="uid://b4sylbe5hhu7h" path="res://assets/sprites/world_tileset.png" id="2_v1mav"]
@@ -352,8 +352,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_17vp5"]
 _data = {
-"RESET": SubResource("Animation_lbyrn"),
-"move": SubResource("Animation_cra5g")
+&"RESET": SubResource("Animation_lbyrn"),
+&"move": SubResource("Animation_cra5g")
 }
 
 [sub_resource type="Animation" id="Animation_7mu6g"]
@@ -390,8 +390,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_jd4jd"]
 _data = {
-"RESET": SubResource("Animation_7mu6g"),
-"new_animation": SubResource("Animation_v34jt")
+&"RESET": SubResource("Animation_7mu6g"),
+&"new_animation": SubResource("Animation_v34jt")
 }
 
 [node name="Game" type="Node2D"]
@@ -489,7 +489,7 @@ position = Vector2(151, 10)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Platforms/Platform2"]
 libraries = {
-"": SubResource("AnimationLibrary_17vp5")
+&"": SubResource("AnimationLibrary_17vp5")
 }
 autoplay = "RESET"
 
@@ -498,7 +498,7 @@ position = Vector2(-129, 167)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Platforms/Platform3"]
 libraries = {
-"": SubResource("AnimationLibrary_jd4jd")
+&"": SubResource("AnimationLibrary_jd4jd")
 }
 autoplay = "new_animation"
 

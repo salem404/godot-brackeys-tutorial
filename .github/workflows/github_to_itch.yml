@@ -1,0 +1,170 @@
+name: Publish to Itch.io
+
+on:
+ push:
+  branches:
+  - main
+ pull_request:
+  branches:
+  - main
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+ BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }} # Needs to be added through github
+ GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ IS_MAIN: ${{ contains(github.ref, 'main') }}
+ ITCH_USER: ${{ vars.ITCH_USER }} # Your itch.io username - needs to be added as a repository variable
+ ITCH_GAME: ${{ vars.ITCH_GAME }} # Your game name on itch.io - needs to be added as a repository variable
+
+jobs:
+ Export:
+  runs-on: ubuntu-latest
+  steps:
+  - uses: actions/checkout@v4
+  
+  # Clean up old artifacts first
+  - name: Delete old artifacts
+    uses: geekyeggo/delete-artifact@v5
+    with:
+      name: |
+        exports
+        VERSION
+    continue-on-error: true
+  
+  - name: Download + Authorize Godot
+    run: |
+       curl -L -o godot.zip https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
+       unzip godot.zip
+       mv Godot_v4.5-stable_linux.x86_64 godot
+       ls
+       chmod +x godot
+ 
+  - name: Download Export Templates
+    run: |
+     curl -L -o export_templates.zip https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz
+     unzip export_templates.zip
+  
+  - name: Install Export Templates
+    run: |
+     mkdir -p ~/.local/share/godot/export_templates/4.5.stable
+     mv ./templates/* ~/.local/share/godot/export_templates/4.5.stable
+
+  - name: Export Windows Desktop
+    run: |
+     mkdir -p ./exports/windows
+     ./godot --headless --path ./ --export-release "Windows Desktop" ./exports/windows/godot-brackeys-tutorial.exe
+    
+  - name: Export Web
+    run: |
+     mkdir -p ./exports/web
+     ./godot --headless --path ./ --export-release "Web" ./exports/web/index.html
+    
+  - name: Export Linux
+    run: |
+     mkdir -p ./exports/linux
+     ./godot --headless --path ./ --export-release "Linux" ./exports/linux/godot-brackeys-tutorial.x86_64
+  
+  - uses: actions/upload-artifact@v4
+    with:
+     name: exports
+     path: exports
+  
+ Release:
+  needs: Export
+  if: ${{ contains(github.ref, 'main') }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+   
+    - name: Version
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+       github_token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Verify Tag
+      if: ${{ !steps.tag_version.outputs.new_tag }}
+      run: exit 1
+    
+    - name: Download Exports
+      uses: actions/download-artifact@v4
+      with:
+       name: exports
+       path: exports
+    
+    - name: Create Platform Zips
+      run: |
+        zip -r godot-brackeys-tutorial-windows-${{ steps.tag_version.outputs.new_tag }}.zip exports/windows
+        zip -r godot-brackeys-tutorial-web-${{ steps.tag_version.outputs.new_tag }}.zip exports/web
+        zip -r godot-brackeys-tutorial-linux-${{ steps.tag_version.outputs.new_tag }}.zip exports/linux
+
+    - name: Create Github Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+       tag_name: ${{ steps.tag_version.outputs.new_tag }}
+       name: Release ${{ steps.tag_version.outputs.new_tag }}
+       body: ${{ steps.tag_version.outputs.changelog }}
+       files: |
+         godot-brackeys-tutorial-windows-${{ steps.tag_version.outputs.new_tag }}.zip
+         godot-brackeys-tutorial-web-${{ steps.tag_version.outputs.new_tag }}.zip
+         godot-brackeys-tutorial-linux-${{ steps.tag_version.outputs.new_tag }}.zip
+
+    - uses: frdrwrt/write-to-file@v1.3
+      with:
+       filepath: ./VERSION.txt
+       content: ${{ steps.tag_version.outputs.new_version }}
+       mode: 0655
+    
+    - uses: actions/upload-artifact@v4
+      with:
+       name: VERSION
+       path: ./VERSION.txt
+ 
+ Publish:
+  needs: Release
+  if: ${{ contains(github.ref, 'main') }}
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: exports
+        path: exports
+    
+    - name: Download + Authorize Butler
+      run: |
+       curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+       unzip butler.zip
+       chmod +x butler
+       ./butler -V
+    
+    - name: Login To Butler
+      run: ./butler login
+      env:
+        BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+    
+    - name: Push Windows Build to Itch.io
+      run: ./butler push exports/windows ${{ env.ITCH_USER }}/${{ env.ITCH_GAME }}:windows
+    
+    - name: Push Web Build to Itch.io
+      run: ./butler push exports/web ${{ env.ITCH_USER }}/${{ env.ITCH_GAME }}:web
+    
+    - name: Push Linux Build to Itch.io
+      run: ./butler push exports/linux ${{ env.ITCH_USER }}/${{ env.ITCH_GAME }}:linux
+    
+
+ Cleanup:
+  needs: [Export, Release, Publish]
+  if: always()
+  runs-on: ubuntu-latest
+  steps:
+    - uses: geekyeggo/delete-artifact@v5
+      with:
+       name: |
+         exports
+         VERSION

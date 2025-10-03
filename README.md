@@ -1,6 +1,6 @@
 <div align="center">
   
-  <h1 align="center">Godot Beginner Tutorial - Brackeis</h1>
+  <h1 align="center">Godot Beginner Tutorial - Brackeys</h1>
   <img src="https://img.shields.io/badge/Asignatura-Programación_y_motores_de_videojuegos-5c6181?style=for-the-badge" alt="Asignatura: Programación y motores de videojuegos">
 </div>
 
