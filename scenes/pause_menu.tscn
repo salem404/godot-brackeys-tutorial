@@ -1,0 +1,53 @@
+[gd_scene load_steps=4 format=3 uid="uid://dqo585sra0b3b"]
+
+[ext_resource type="FontFile" uid="uid://bj00wbagcewg0" path="res://assets/fonts/PixelOperator8-Bold.ttf" id="2_x4jx1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nt7q6"]
+bg_color = Color(0.10747974, 0.10747974, 0.10747967, 0.70980394)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nt7q6"]
+
+[node name="PauseMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_nt7q6")
+
+[node name="GUI" type="AspectRatioContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel2" type="Panel" parent="Panel/GUI"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_nt7q6")
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/GUI/Panel2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/GUI/Panel2/CenterContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/GUI/Panel2/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_x4jx1")
+text = "Paused"
