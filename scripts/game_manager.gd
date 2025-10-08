@@ -1,10 +1,10 @@
 extends Node
 
-
 var score = 0
-var game_running: bool = true
 
 @onready var score_label: Label = $ScoreLabel
+@onready var level = $Level
+@onready var game_running: bool = true
 
 func add_point():
 	score += 1
@@ -13,16 +13,15 @@ func add_point():
 
 func start_game():
 	score = 0
-	game_running = true
 
 func pause_game():
 	if game_running && Input.is_action_just_pressed("pause"):
 		$Hud/PauseMenu.show()
-		Engine.time_scale = 0
+		level.get_tree().paused = true
 		game_running = false
 	elif !game_running && Input.is_action_just_pressed("pause"):
 		$Hud/PauseMenu.hide()
-		Engine.time_scale = 1
+		level.get_tree().paused = false
 		game_running = true
 
 func _process(_delta: float) -> void:
