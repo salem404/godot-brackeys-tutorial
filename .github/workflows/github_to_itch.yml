@@ -32,6 +32,7 @@ jobs:
   
   - name: Detect Project Configuration
     id: detect-config
+    shell: bash
     run: |
       echo "Detecting project configuration from project.godot..."
       
@@ -85,7 +86,7 @@ jobs:
           fi
           
           matrix_include+="{\"platform\":\"$platform\",\"preset\":\"$preset_name\",\"folder\":\"$folder_name\",\"file\":\"$file_name\"}"
-          ((platform_count++))
+          platform_count=$((platform_count + 1))
         else
           echo "❌ No preset found for $platform ($preset_name)"
         fi
@@ -127,6 +128,7 @@ jobs:
   
   - name: Setup Godot
     if: steps.cache-godot.outputs.cache-hit != 'true'
+    shell: bash
     run: |
        GODOT_VERSION="${{ needs.Detect-Platforms.outputs.godot-version }}"
        echo "Downloading Godot $GODOT_VERSION..."
@@ -143,6 +145,7 @@ jobs:
        mv ./templates/* ~/.local/share/godot/export_templates/$GODOT_VERSION/
 
   - name: Export ${{ matrix.platform }}
+    shell: bash
     run: |
       mkdir -p ./exports/${{ matrix.folder }}
       echo "Exporting ${{ matrix.platform }} build..."
@@ -195,6 +198,7 @@ jobs:
     
     - name: Verify Tag Creation
       if: ${{ !steps.tag_version.outputs.new_tag }}
+      shell: bash
       run: |
         echo "No new tag was created. This might happen if:"
         echo "1. No commits since last tag"
@@ -210,6 +214,7 @@ jobs:
         merge-multiple: true
     
     - name: Create Platform Zips
+      shell: bash
       run: |
         echo "Creating platform-specific ZIP files..."
         echo "Available exports:"
@@ -272,6 +277,7 @@ jobs:
     
     - name: Download + Setup Butler
       if: steps.cache-butler.outputs.cache-hit != 'true'
+      shell: bash
       run: |
        echo "Downloading Butler..."
        curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
@@ -279,6 +285,7 @@ jobs:
        chmod +x butler
     
     - name: Verify Butler
+      shell: bash
       run: |
         ./butler -V
         echo "Butler version verified"
@@ -289,6 +296,7 @@ jobs:
         BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
     
     - name: Push ${{ matrix.platform }} Build to Itch.io
+      shell: bash
       run: |
         echo "Pushing ${{ matrix.platform }} build..."
         ./butler push exports/${{ matrix.folder }} ${{ env.ITCH_USER }}/${{ env.ITCH_GAME }}:${{ matrix.platform }} --userversion ${{ needs.Release.outputs.release-tag }}
@@ -302,6 +310,7 @@ jobs:
   steps:
     - name: Notify Success
       if: ${{ needs.Export.result == 'success' && needs.Release.result == 'success' && needs.Publish.result == 'success' }}
+      shell: bash
       run: |
         echo "🎉 Deployment successful!"
         echo "Release: ${{ needs.Release.outputs.release-tag }}"
@@ -309,6 +318,7 @@ jobs:
     
     - name: Notify Failure
       if: ${{ needs.Export.result == 'failure' || needs.Release.result == 'failure' || needs.Publish.result == 'failure' }}
+      shell: bash
       run: |
         echo "❌ Deployment failed!"
         echo "Detect-Platforms: ${{ needs.Detect-Platforms.result }}"
