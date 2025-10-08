@@ -210,71 +210,41 @@ jobs:
      path: exports/${{ matrix.folder }}
   
  Release:
-  needs: [Detect-Platforms, Export]
-  if: ${{ contains(github.ref, 'main') && needs.Detect-Platforms.outputs.has-platforms == 'true' }}
+  needs: Export
+  if: ${{ contains(github.ref, 'main') }}
   runs-on: ubuntu-latest
   outputs:
     release-tag: ${{ steps.tag_version.outputs.new_tag }}
-    release-url: ${{ steps.create_release.outputs.upload_url }}
   steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Needed for proper tag generation
    
     - name: Version
       id: tag_version
       uses: mathieudutour/github-tag-action@v6.2
       with:
        github_token: ${{ secrets.GITHUB_TOKEN }}
-       default_bump: patch
-       tag_prefix: "v"
     
-    - name: Verify Tag Creation
+    - name: Verify Tag
       if: ${{ !steps.tag_version.outputs.new_tag }}
-      shell: bash
-      run: |
-        echo "No new tag was created. This might happen if:"
-        echo "1. No commits since last tag"
-        echo "2. Commit messages don't trigger version bump"
-        echo "3. Tag already exists"
-        exit 1
+      run: exit 1
     
-    - name: Download All Exports
+    - name: Download Exports
       uses: actions/download-artifact@v4
       with:
-        pattern: export-*
-        path: exports
-        merge-multiple: true
+       pattern: export-*
+       path: exports
+       merge-multiple: true
     
     - name: Create Platform Zips
-      shell: bash
       run: |
-        echo "Creating platform-specific ZIP files..."
-        echo "Available exports:"
-        ls -la exports/ || echo "No exports directory found"
+        # Create ZIPs for downloadable platforms (not web)
+        [ -d exports/windows ] && zip -r godot-brackeys-tutorial-windows-${{ steps.tag_version.outputs.new_tag }}.zip exports/windows
+        [ -d exports/linux ] && zip -r godot-brackeys-tutorial-linux-${{ steps.tag_version.outputs.new_tag }}.zip exports/linux
+        [ -d exports/macos ] && zip -r godot-brackeys-tutorial-macos-${{ steps.tag_version.outputs.new_tag }}.zip exports/macos
         
-        # Create ZIP for each available platform
-        GAME_NAME="${{ needs.Detect-Platforms.outputs.game-name }}"
-        for platform_dir in exports/*/; do
-          if [ -d "$platform_dir" ]; then
-            platform_name=$(basename "$platform_dir")
-            echo "Creating ZIP for $platform_name..."
-            cd "$platform_dir" && zip -r "../../${GAME_NAME}-$platform_name-${{ steps.tag_version.outputs.new_tag }}.zip" . && cd ../..
-          fi
-        done
-        
-        # Verify ZIP files
-        echo "Created ZIP files:"
+        # List created files
         ls -lh *.zip 2>/dev/null || echo "No ZIP files created"
-        
-        # Test ZIP integrity
-        for zip_file in *.zip; do
-          if [ -f "$zip_file" ]; then
-            echo "Testing $zip_file..."
-            unzip -t "$zip_file"
-          fi
-        done
-
+    
     - name: Create Github Release
       id: create_release
       uses: softprops/action-gh-release@v1
@@ -285,15 +255,22 @@ jobs:
        name: Release ${{ steps.tag_version.outputs.new_tag }}
        body: ${{ steps.tag_version.outputs.changelog }}
        files: |
-         ${{ needs.Detect-Platforms.outputs.game-name }}-*-${{ steps.tag_version.outputs.new_tag }}.zip
+         godot-brackeys-tutorial-*-${{ steps.tag_version.outputs.new_tag }}.zip
  
  Publish:
-  needs: [Detect-Platforms, Release]
-  if: ${{ contains(github.ref, 'main') && needs.Release.outputs.release-tag && needs.Detect-Platforms.outputs.has-platforms == 'true' }}
+  needs: Release
+  if: ${{ contains(github.ref, 'main') && needs.Release.outputs.release-tag }}
   runs-on: ubuntu-latest
   strategy:
-    matrix: ${{ fromJson(needs.Detect-Platforms.outputs.matrix) }}
-    fail-fast: false  # Continue publishing other platforms even if one fails
+    matrix:
+      include:
+        - platform: windows
+          folder: windows
+        - platform: linux
+          folder: linux
+        - platform: web
+          folder: web
+    fail-fast: false
   steps:
     - name: Download ${{ matrix.platform }} Export
       uses: actions/download-artifact@v4
@@ -337,7 +314,7 @@ jobs:
     
 
  Notify:
-  needs: [Detect-Platforms, Export, Release, Publish]
+  needs: [Export, Release, Publish]
   if: always() && contains(github.ref, 'main')
   runs-on: ubuntu-latest
   steps:
@@ -347,20 +324,19 @@ jobs:
       run: |
         echo "🎉 Deployment successful!"
         echo "Release: ${{ needs.Release.outputs.release-tag }}"
-        echo "All configured platforms have been published to itch.io!"
+        echo "All platforms have been published to itch.io!"
     
     - name: Notify Failure
       if: ${{ needs.Export.result == 'failure' || needs.Release.result == 'failure' || needs.Publish.result == 'failure' }}
       shell: bash
       run: |
         echo "❌ Deployment failed!"
-        echo "Detect-Platforms: ${{ needs.Detect-Platforms.result }}"
         echo "Export: ${{ needs.Export.result }}"
         echo "Release: ${{ needs.Release.result }}"
         echo "Publish: ${{ needs.Publish.result }}"
 
  Cleanup:
-  needs: [Detect-Platforms, Export, Release, Publish, Notify]
+  needs: [Export, Release, Publish, Notify]
   if: always()
   runs-on: ubuntu-latest
   steps:
