@@ -51,6 +51,7 @@ jobs:
   
   - name: Detect Export Presets & Set Matrix
     id: set-matrix
+    shell: bash
     run: |
       echo "Detecting configured export presets..."
       
