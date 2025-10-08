@@ -151,13 +151,27 @@ jobs:
        curl -L -o export_templates.tpz "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/Godot_v${GODOT_VERSION}_export_templates.tpz"
        unzip export_templates.tpz
        
-       # Create templates directory and move templates
-       mkdir -p ~/.local/share/godot/export_templates/$GODOT_VERSION
-       mv templates/* ~/.local/share/godot/export_templates/$GODOT_VERSION/
+       # The templates folder name inside the .tpz might have version info
+       # We need to find the actual templates folder and use the correct version format
+       echo "Contents after extraction:"
+       ls -la
+       
+       # Create templates directory with the exact version format Godot expects
+       TEMPLATE_VERSION="${GODOT_VERSION//-/.}"  # Convert 4.3-stable to 4.3.stable
+       mkdir -p ~/.local/share/godot/export_templates/$TEMPLATE_VERSION
+       
+       # Move templates (they should be in a 'templates' directory)
+       if [ -d "templates" ]; then
+         mv templates/* ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/
+       else
+         echo "ERROR: templates directory not found after extraction"
+         ls -la
+         exit 1
+       fi
        
        # Verify templates installed
-       echo "Installed templates:"
-       ls -la ~/.local/share/godot/export_templates/$GODOT_VERSION/
+       echo "Installed templates at: ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/"
+       ls -la ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/
 
   - name: Export ${{ matrix.platform }}
     shell: bash
