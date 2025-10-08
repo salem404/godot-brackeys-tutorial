@@ -36,18 +36,13 @@ jobs:
     run: |
       echo "Detecting project configuration from project.godot..."
       
-      # Extract Godot version from project.godot
-      GODOT_MAJOR=$(grep -o 'config/features=.*"[0-9]\+\.[0-9]\+' project.godot | grep -o '[0-9]\+\.[0-9]\+' || echo "4.3")
+      # Extract Godot version from project.godot (just the version number like "4.3" or "4.5")
+      GODOT_VERSION=$(grep 'config/features' project.godot | grep -o '[0-9]\+\.[0-9]\+' | head -n 1)
       
-      # For Godot 4.3+, check if exact patch version exists, otherwise use latest stable
-      if [[ "$GODOT_MAJOR" == "4.5" ]]; then
-        GODOT_VERSION="4.3-stable"
-        echo "Note: Godot 4.5 not released yet, using 4.3-stable"
-      elif [[ "$GODOT_MAJOR" == "4.4" ]]; then
-        GODOT_VERSION="4.3-stable"
-        echo "Note: Using 4.3-stable"
-      else
-        GODOT_VERSION="${GODOT_MAJOR}-stable"
+      # Fail if version not found
+      if [ -z "$GODOT_VERSION" ]; then
+        echo "❌ ERROR: Could not detect Godot version from project.godot"
+        exit 1
       fi
       
       # Extract game name from project.godot (fallback to repo name)
@@ -134,44 +129,53 @@ jobs:
       path: |
         godot
         ~/.local/share/godot/export_templates
-      key: godot-${{ needs.Detect-Platforms.outputs.godot-version }}
+      key: godot-${{ needs.Detect-Platforms.outputs.godot-version }}-stable
   
   - name: Setup Godot
     if: steps.cache-godot.outputs.cache-hit != 'true'
     shell: bash
     run: |
        GODOT_VERSION="${{ needs.Detect-Platforms.outputs.godot-version }}"
-       echo "Downloading Godot $GODOT_VERSION..."
-       curl -L -o godot.zip "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-       unzip godot.zip
-       mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
-       chmod +x godot
+       echo "Setting up Godot $GODOT_VERSION..."
        
-       echo "Downloading export templates..."
-       curl -L -o export_templates.tpz "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/Godot_v${GODOT_VERSION}_export_templates.tpz"
-       unzip export_templates.tpz
+       # Download Godot from GitHub releases
+       echo "Downloading Godot executable from GitHub..."
+       GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+       echo "URL: $GODOT_URL"
        
-       # The templates folder name inside the .tpz might have version info
-       # We need to find the actual templates folder and use the correct version format
-       echo "Contents after extraction:"
-       ls -la
-       
-       # Create templates directory with the exact version format Godot expects
-       TEMPLATE_VERSION="${GODOT_VERSION//-/.}"  # Convert 4.3-stable to 4.3.stable
-       mkdir -p ~/.local/share/godot/export_templates/$TEMPLATE_VERSION
-       
-       # Move templates (they should be in a 'templates' directory)
-       if [ -d "templates" ]; then
-         mv templates/* ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/
-       else
-         echo "ERROR: templates directory not found after extraction"
-         ls -la
+       if ! curl -f -L -o godot.zip "$GODOT_URL"; then
+         echo "❌ ERROR: Failed to download Godot $GODOT_VERSION from GitHub"
+         echo "Please check if version $GODOT_VERSION-stable exists at:"
+         echo "https://github.com/godotengine/godot/releases"
          exit 1
        fi
        
+       unzip -q godot.zip
+       mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+       chmod +x godot
+       ./godot --version
+       
+       # Download export templates from GitHub releases
+       echo "Downloading export templates from GitHub..."
+       TEMPLATES_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+       echo "URL: $TEMPLATES_URL"
+       
+       if ! curl -f -L -o export_templates.tpz "$TEMPLATES_URL"; then
+         echo "❌ ERROR: Failed to download export templates for Godot $GODOT_VERSION"
+         echo "Please check if export templates exist for version $GODOT_VERSION-stable"
+         exit 1
+       fi
+       
+       unzip -q export_templates.tpz
+       
+       # Install templates with the correct version format (e.g., 4.5.stable)
+       mkdir -p ~/.local/share/godot/export_templates/$GODOT_VERSION.stable
+       mv ./templates/* ~/.local/share/godot/export_templates/$GODOT_VERSION.stable/
+       
        # Verify templates installed
-       echo "Installed templates at: ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/"
-       ls -la ~/.local/share/godot/export_templates/$TEMPLATE_VERSION/
+       echo "✅ Successfully installed Godot $GODOT_VERSION and export templates"
+       echo "Templates installed at: ~/.local/share/godot/export_templates/$GODOT_VERSION.stable/"
+       ls -la ~/.local/share/godot/export_templates/$GODOT_VERSION.stable/ | head -n 10
 
   - name: Export ${{ matrix.platform }}
     shell: bash
