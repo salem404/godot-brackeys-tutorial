@@ -1,0 +1,78 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement", "needs-review"]
+assignees:
+  - salem404
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your idea below.
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What kind of feature is this?
+      options:
+        - Gameplay Mechanic
+        - Level Design
+        - User Interface
+        - Audio/Music
+        - Graphics/Visual
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: I find it frustrating when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see
+      placeholder: Add a double jump ability that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered
+      placeholder: Another option could be...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples / References
+      description: Add any examples from other games or links to similar features
+      placeholder: Similar to the mechanic in [Game Name]...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockups, or screenshots about the feature
+      placeholder: I've attached a mockup of how this could look...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have checked existing feature requests to avoid duplicates
+          required: true
+        - label: This feature fits with the game's current design and scope
+          required: false

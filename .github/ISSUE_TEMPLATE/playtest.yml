@@ -1,0 +1,101 @@
+name: 🎮 Playtest Feedback
+description: Share feedback from playtesting the game
+title: "[Playtest]: "
+labels: ["feedback", "playtest"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for playtesting! Your feedback helps improve the game.
+
+  - type: input
+    id: version
+    attributes:
+      label: Game Version
+      description: Which version did you playtest?
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform did you play on?
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Web (Browser)
+    validations:
+      required: true
+
+  - type: input
+    id: playtime
+    attributes:
+      label: Playtime
+      description: How long did you play?
+      placeholder: "30 minutes"
+
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Overall Difficulty
+      description: How difficult was the game?
+      options:
+        - Too Easy
+        - Easy
+        - Just Right
+        - Hard
+        - Too Hard
+
+  - type: dropdown
+    id: enjoyment
+    attributes:
+      label: Enjoyment Level
+      description: How much did you enjoy the game?
+      options:
+        - "5 - Loved it!"
+        - "4 - Really enjoyed it"
+        - "3 - It was okay"
+        - "2 - Not very fun"
+        - "1 - Didn't enjoy it"
+
+  - type: textarea
+    id: liked
+    attributes:
+      label: What Did You Like?
+      description: What parts of the game did you enjoy most?
+      placeholder: I really enjoyed the jumping mechanics and the music...
+    validations:
+      required: true
+
+  - type: textarea
+    id: disliked
+    attributes:
+      label: What Could Be Improved?
+      description: What parts of the game could be better?
+      placeholder: The second level felt too difficult...
+    validations:
+      required: true
+
+  - type: textarea
+    id: bugs
+    attributes:
+      label: Bugs Encountered
+      description: Did you encounter any bugs or issues?
+      placeholder: The player got stuck on level 3...
+
+  - type: textarea
+    id: suggestions
+    attributes:
+      label: Suggestions
+      description: Any suggestions for new features or changes?
+      placeholder: It would be cool if...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Feedback
+      description: Any other thoughts or comments?
