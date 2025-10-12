@@ -10,6 +10,7 @@ on:
        type: choice
        options:
          - auto
+         - none
          - major
          - minor
          - patch
@@ -208,16 +209,44 @@ jobs:
       with:
         fetch-depth: 0  # Need full history for changelog
    
-    - name: Create Version Tag
+    - name: Get or Create Version Tag
       id: tag_version
+      shell: bash
+      run: |
+        if [ "${{ github.event.inputs.bump_type }}" == "none" ]; then
+          # Use the latest existing tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Using existing tag: $LATEST_TAG"
+          echo "new_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "changelog=Release for $LATEST_TAG (no version bump)" >> $GITHUB_OUTPUT
+          echo "skipped=true" >> $GITHUB_OUTPUT
+        else
+          echo "skipped=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create New Version Tag
+      if: steps.tag_version.outputs.skipped != 'true'
+      id: bump_version
       uses: mathieudutour/github-tag-action@v6.2
       with:
        github_token: ${{ secrets.GITHUB_TOKEN }}
        default_bump: ${{ github.event.inputs.bump_type == 'auto' && 'false' || github.event.inputs.bump_type }}
        release_branches: main
     
-    - name: Verify Tag Created
-      if: ${{ !steps.tag_version.outputs.new_tag }}
+    - name: Set Final Tag
+      id: final_tag
+      shell: bash
+      run: |
+        if [ "${{ steps.tag_version.outputs.skipped }}" == "true" ]; then
+          echo "new_tag=${{ steps.tag_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
+          echo "changelog=${{ steps.tag_version.outputs.changelog }}" >> $GITHUB_OUTPUT
+        else
+          echo "new_tag=${{ steps.bump_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
+          echo "changelog=${{ steps.bump_version.outputs.changelog }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Verify Tag
+      if: steps.tag_version.outputs.skipped != 'true' && !steps.bump_version.outputs.new_tag
       run: |
         echo "❌ ERROR: No version tag was created!"
         echo ""
@@ -227,7 +256,8 @@ jobs:
         echo ""
         echo "Please either:"
         echo "- Use conventional commits in your commit messages, OR"
-        echo "- Select a specific bump type (major, minor, patch) when running this workflow"
+        echo "- Select a specific bump type (major, minor, patch), OR"
+        echo "- Select 'none' to use the existing version tag"
         exit 1
     
     - name: Download Exports (from test run)
@@ -264,16 +294,39 @@ jobs:
       with:
        pattern: export-*
        path: exports
-       merge-multiple: true
+       merge-multiple: false
     
     - name: Create Platform Zips
       run: |
         echo "Creating ZIP files for release..."
         
+        # Debug: Show directory structure
+        echo "Directory structure:"
+        ls -R exports/
+        echo ""
+        
         # Create ZIPs for downloadable platforms (not web)
-        [ -d exports/windows ] && zip -r godot-brackeys-tutorial-windows-${{ steps.tag_version.outputs.new_tag }}.zip exports/windows && echo "✅ Windows ZIP created"
-        [ -d exports/linux ] && zip -r godot-brackeys-tutorial-linux-${{ steps.tag_version.outputs.new_tag }}.zip exports/linux && echo "✅ Linux ZIP created"
-        [ -d exports/macos ] && zip -r godot-brackeys-tutorial-macos-${{ steps.tag_version.outputs.new_tag }}.zip exports/macos && echo "✅ macOS ZIP created"
+        # When merge-multiple is false, artifacts are in exports/export-{platform}/*
+        if [ -d exports/export-windows ]; then
+          cd exports/export-windows
+          zip -r ../../godot-brackeys-tutorial-windows-${{ steps.final_tag.outputs.new_tag }}.zip .
+          cd ../..
+          echo "✅ Windows ZIP created"
+        fi
+        
+        if [ -d exports/export-linux ]; then
+          cd exports/export-linux
+          zip -r ../../godot-brackeys-tutorial-linux-${{ steps.final_tag.outputs.new_tag }}.zip .
+          cd ../..
+          echo "✅ Linux ZIP created"
+        fi
+        
+        if [ -d exports/export-macos ]; then
+          cd exports/export-macos
+          zip -r ../../godot-brackeys-tutorial-macos-${{ steps.final_tag.outputs.new_tag }}.zip .
+          cd ../..
+          echo "✅ macOS ZIP created"
+        fi
         
         # List created files
         echo ""
@@ -286,11 +339,11 @@ jobs:
       env:
        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-       tag_name: ${{ steps.tag_version.outputs.new_tag }}
-       name: Release ${{ steps.tag_version.outputs.new_tag }}
-       body: ${{ steps.tag_version.outputs.changelog }}
+       tag_name: ${{ steps.final_tag.outputs.new_tag }}
+       name: Release ${{ steps.final_tag.outputs.new_tag }}
+       body: ${{ steps.final_tag.outputs.changelog }}
        files: |
-         godot-brackeys-tutorial-*-${{ steps.tag_version.outputs.new_tag }}.zip
+         godot-brackeys-tutorial-*-${{ steps.final_tag.outputs.new_tag }}.zip
        draft: false
        prerelease: false
  
