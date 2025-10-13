@@ -119,6 +119,7 @@ jobs:
   needs: Detect-Platforms
   if: needs.Detect-Platforms.outputs.has-platforms == 'true' && github.event.inputs.rebuild == 'true'
   runs-on: ubuntu-latest
+  name: Export (${{ matrix.platform }})
   strategy:
     matrix: ${{ fromJson(needs.Detect-Platforms.outputs.matrix) }}
     fail-fast: false
@@ -203,50 +204,34 @@ jobs:
   if: always() && (needs.Export.result == 'success' || needs.Export.result == 'skipped')
   runs-on: ubuntu-latest
   outputs:
-    release-tag: ${{ steps.tag_version.outputs.new_tag }}
+    release-tag: ${{ steps.existing_tag.outputs.new_tag || steps.new_tag.outputs.new_tag }}
+    game-name: ${{ needs.Detect-Platforms.outputs.game-name }}
   steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Need full history for changelog
    
-    - name: Get or Create Version Tag
-      id: tag_version
+    - name: Get Existing Tag (if no bump)
+      if: github.event.inputs.bump_type == 'none'
+      id: existing_tag
       shell: bash
       run: |
-        if [ "${{ github.event.inputs.bump_type }}" == "none" ]; then
-          # Use the latest existing tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Using existing tag: $LATEST_TAG"
-          echo "new_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "changelog=Release for $LATEST_TAG (no version bump)" >> $GITHUB_OUTPUT
-          echo "skipped=true" >> $GITHUB_OUTPUT
-        else
-          echo "skipped=false" >> $GITHUB_OUTPUT
-        fi
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Using existing tag: $LATEST_TAG"
+        echo "new_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        echo "changelog=Release for $LATEST_TAG (no version bump)" >> $GITHUB_OUTPUT
     
     - name: Create New Version Tag
-      if: steps.tag_version.outputs.skipped != 'true'
-      id: bump_version
+      if: github.event.inputs.bump_type != 'none'
+      id: new_tag
       uses: mathieudutour/github-tag-action@v6.2
       with:
        github_token: ${{ secrets.GITHUB_TOKEN }}
        default_bump: ${{ github.event.inputs.bump_type == 'auto' && 'false' || github.event.inputs.bump_type }}
        release_branches: main
     
-    - name: Set Final Tag
-      id: final_tag
-      shell: bash
-      run: |
-        if [ "${{ steps.tag_version.outputs.skipped }}" == "true" ]; then
-          echo "new_tag=${{ steps.tag_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
-          echo "changelog=${{ steps.tag_version.outputs.changelog }}" >> $GITHUB_OUTPUT
-        else
-          echo "new_tag=${{ steps.bump_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
-          echo "changelog=${{ steps.bump_version.outputs.changelog }}" >> $GITHUB_OUTPUT
-        fi
-    
     - name: Verify Tag
-      if: steps.tag_version.outputs.skipped != 'true' && !steps.bump_version.outputs.new_tag
+      if: github.event.inputs.bump_type != 'none' && !steps.new_tag.outputs.new_tag
       run: |
         echo "❌ ERROR: No version tag was created!"
         echo ""
@@ -281,7 +266,6 @@ jobs:
         if [ -z "$(ls -A exports 2>/dev/null)" ]; then
           echo "⚠️ No test artifacts found from recent test runs"
           echo "artifacts_found=false" >> $GITHUB_OUTPUT
-          exit 1
         else
           echo "✅ Using builds from test run"
           ls -R exports/
@@ -300,6 +284,9 @@ jobs:
       run: |
         echo "Creating ZIP files for release..."
         
+        TAG="${{ steps.existing_tag.outputs.new_tag || steps.new_tag.outputs.new_tag }}"
+        GAME="${{ needs.Detect-Platforms.outputs.game-name }}"
+        
         # Debug: Show directory structure
         echo "Directory structure:"
         ls -R exports/
@@ -309,21 +296,21 @@ jobs:
         # When merge-multiple is false, artifacts are in exports/export-{platform}/*
         if [ -d exports/export-windows ]; then
           cd exports/export-windows
-          zip -r ../../godot-brackeys-tutorial-windows-${{ steps.final_tag.outputs.new_tag }}.zip .
+          zip -r ../../${GAME}-windows-${TAG}.zip .
           cd ../..
           echo "✅ Windows ZIP created"
         fi
         
         if [ -d exports/export-linux ]; then
           cd exports/export-linux
-          zip -r ../../godot-brackeys-tutorial-linux-${{ steps.final_tag.outputs.new_tag }}.zip .
+          zip -r ../../${GAME}-linux-${TAG}.zip .
           cd ../..
           echo "✅ Linux ZIP created"
         fi
         
         if [ -d exports/export-macos ]; then
           cd exports/export-macos
-          zip -r ../../godot-brackeys-tutorial-macos-${{ steps.final_tag.outputs.new_tag }}.zip .
+          zip -r ../../${GAME}-macos-${TAG}.zip .
           cd ../..
           echo "✅ macOS ZIP created"
         fi
@@ -339,11 +326,11 @@ jobs:
       env:
        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-       tag_name: ${{ steps.final_tag.outputs.new_tag }}
-       name: Release ${{ steps.final_tag.outputs.new_tag }}
-       body: ${{ steps.final_tag.outputs.changelog }}
+       tag_name: ${{ steps.existing_tag.outputs.new_tag || steps.new_tag.outputs.new_tag }}
+       name: Release ${{ steps.existing_tag.outputs.new_tag || steps.new_tag.outputs.new_tag }}
+       body: ${{ steps.existing_tag.outputs.changelog || steps.new_tag.outputs.changelog }}
        files: |
-         godot-brackeys-tutorial-*-${{ steps.final_tag.outputs.new_tag }}.zip
+         ${{ needs.Detect-Platforms.outputs.game-name }}-*-${{ steps.existing_tag.outputs.new_tag || steps.new_tag.outputs.new_tag }}.zip
        draft: false
        prerelease: false
  
@@ -351,6 +338,7 @@ jobs:
   needs: Release
   if: needs.Release.outputs.release-tag
   runs-on: ubuntu-latest
+  name: Publish to Itch.io (${{ matrix.platform }})
   strategy:
     matrix:
       include:
@@ -396,12 +384,7 @@ jobs:
        curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
        unzip butler.zip
        chmod +x butler
-    
-    - name: Verify Butler
-      shell: bash
-      run: |
-        ./butler -V
-        echo "Butler version verified"
+       ./butler -V
     
     - name: Login To Butler
       run: ./butler login
@@ -430,6 +413,7 @@ jobs:
           echo "### ✅ Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** \`${{ needs.Release.outputs.release-tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Bump Type:** ${{ github.event.inputs.bump_type }}" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ github.event.inputs.rebuild }}" == "true" ]; then
             echo "**Build:** 🔨 Freshly rebuilt from source" >> $GITHUB_STEP_SUMMARY
