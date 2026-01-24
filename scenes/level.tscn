@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=4 uid="uid://chwbrqx4twxeu"]
+[gd_scene load_steps=20 format=4 uid="uid://c0pgs6ylwuxwp"]
 
 [ext_resource type="Texture2D" uid="uid://b4sylbe5hhu7h" path="res://assets/sprites/world_tileset.png" id="1_klq6b"]
 [ext_resource type="FontFile" uid="uid://cl0cuk3ttp5a4" path="res://assets/fonts/PixelOperator8.ttf" id="2_b121j"]
