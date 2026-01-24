@@ -12,6 +12,10 @@ on:
         description: "Reconstruir desde cero"
         type: boolean
         default: true
+  workflow_run:
+    workflows: [Test Builds]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
